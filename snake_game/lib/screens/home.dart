@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
@@ -13,6 +14,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final double snakeIncreaseSpeed = 0.4;
   double snakeSize = 15;
   double snakeWidth = 15;
   double snakeOffsetX = 0;
@@ -27,6 +29,16 @@ class _MyHomePageState extends State<MyHomePage> {
   double appleY = 0;
   bool appleIsVisible = false;
   final double appleSize = 10;
+  int score = 0;
+  int highestScore = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      highestScore = prefs.getInt('highestScore') ?? 0;
+    });
+  }
 
   _checkColision(double minX, double minY) {
     final double snakeLeft = minX + snakeOffsetX;
@@ -40,10 +52,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if ((snakeBottom > appleTop && snakeTop < appleTop) ||
         (snakeTop < appleBottom && snakeBottom > appleBottom)) {
-      if (snakeLeft < appleRight && snakeRight > appleRight) // rtl
+      if (snakeLeft < appleRight && snakeRight > appleRight)
         return true;
       else if (snakeRight > appleLeft && snakeLeft < appleLeft)
-        return true; // ltr
+        return true; //-----
     }
 
     return false;
@@ -69,6 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _createApple(maxX, maxY, minX, minY, shouldSetState: true);
 
     setState(() {
+      score = 0;
       snakeBaseSpeed = 1;
       snakeOffsetX = 0;
       snakeOffsetY = 0;
@@ -79,6 +92,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _finishGame() {
+    if (score > highestScore) {
+      highestScore = score;
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('highestScore', highestScore);
+      });
+    }
+
+    score = 0;
     appleIsVisible = false;
     snakeBaseSpeed = 1;
     snakeOffsetX = 0;
@@ -163,7 +184,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   snakeMaxY - appleSize,
                   screenWidth * canvasLeftOffset,
                   screenHeight * canvasTopOffset);
-              snakeBaseSpeed += 1;
+              snakeBaseSpeed += snakeIncreaseSpeed;
+              score++;
               if (snakeSpeedX > 0)
                 snakeSpeedX = snakeBaseSpeed;
               else if (snakeSpeedX < 0)
@@ -184,6 +206,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
             return Stack(
               children: [
+                Positioned(
+                  top: screenHeight * 0.1,
+                  right: 20,
+                  child: Text("Highest Score: $highestScore"),
+                ),
+                Positioned(
+                  top: screenHeight * 0.1,
+                  left: 20,
+                  child: Text("Score: $score"),
+                ),
                 Positioned(
                   top: screenHeight * 0.075,
                   left: screenWidth * 0.35,
